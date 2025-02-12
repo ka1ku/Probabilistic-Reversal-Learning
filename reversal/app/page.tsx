@@ -9,11 +9,22 @@ import { Sun, Moon } from "lucide-react";
 
 const initialColors = ["red", "blue", "green", "yellow", "purple"];
 
+// Helper to shuffle array items
 const shuffleArray = (array: string[]) => {
   return array.sort(() => Math.random() - 0.5);
 };
 
 const ProbabilisticReversalLearning = () => {
+  // Performance-based reversal constants
+  const [performanceWindowSize, setPerformanceWindowSize] = useState(10);
+  const [performanceCriterion, setPerformanceCriterion] = useState(7); 
+
+  // Existing states
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [colors, setColors] = useState(shuffleArray([...initialColors]));
+  const [totalTrials, setTotalTrials] = useState(20);
+
+  // We add lastReversalIndex to track where to start counting correct trials.
   const [gameState, setGameState] = useState({
     isStarted: false,
     trial: 0,
@@ -25,12 +36,8 @@ const ProbabilisticReversalLearning = () => {
     history: [] as any[],
     gameOver: false,
     startTime: Date.now(),
+    lastReversalIndex: 0, // ← NEW: we start counting from the beginning
   });
-
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [colors, setColors] = useState(shuffleArray([...initialColors]));
-  const [totalTrials, setTotalTrials] = useState(20);
-  const [reversalThreshold, setReversalThreshold] = useState(0.8);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -41,8 +48,12 @@ const ProbabilisticReversalLearning = () => {
   }, [isDarkMode]);
 
   const handleChoice = (choice: string) => {
+    // Determine if this is the last trial
     const gameOver = gameState.trial + 1 >= totalTrials;
-    const lastFeedback = choice === gameState.rewardingStimulus;
+
+    // Check if participant chose the correct (rewarding) stimulus
+    const lastFeedback = (choice === gameState.rewardingStimulus);
+
     let consecutiveCorrect = gameState.consecutiveCorrect;
     let score = gameState.score;
 
@@ -54,25 +65,48 @@ const ProbabilisticReversalLearning = () => {
       score -= 1;
     }
 
-    let rewardingStimulus = gameState.rewardingStimulus;
-    let numReversals = gameState.numReversals;
-    if (Math.random() > reversalThreshold) {
-      rewardingStimulus = initialColors[Math.floor(Math.random() * initialColors.length)];
-      numReversals++;
-    }
-
+    // Build a new history entry for this trial
     const trialDuration = Date.now() - gameState.startTime;
-
     const newHistoryEntry = {
       trial: gameState.trial + 1,
       score,
       choice,
       rewardingStimulus: gameState.rewardingStimulus,
       won: lastFeedback,
-      wasReversalTrial: rewardingStimulus !== gameState.rewardingStimulus,
+      wasReversalTrial: false,
       duration: trialDuration,
     };
 
+    // Append to history
+    let updatedHistory = [...gameState.history, newHistoryEntry];
+
+    // Copy over some values we might update
+    let rewardingStimulus = gameState.rewardingStimulus;
+    let numReversals = gameState.numReversals;
+    let lastReversalIndex = gameState.lastReversalIndex;
+
+    // 1) Take the slice of trials *since the last reversal*.
+    //    Then optionally limit to 'performanceWindowSize' from that point.
+    const historySinceLastReversal = updatedHistory.slice(lastReversalIndex);
+    const recentSlice = historySinceLastReversal.slice(-performanceWindowSize);
+
+    // 2) Count how many correct in that slice
+    const correctCount = recentSlice.filter((t) => t.won).length;
+
+    // 3) If the criterion (e.g., 7 out of last 10) is met, do a reversal
+    if (correctCount >= performanceCriterion) {
+      // Trigger a reversal
+      const newStimulus = initialColors[Math.floor(Math.random() * initialColors.length)];
+
+      rewardingStimulus = newStimulus;
+      numReversals += 1;
+      newHistoryEntry.wasReversalTrial = true;
+
+      // 4) Update lastReversalIndex so future checks only look at new rule trials
+      lastReversalIndex = updatedHistory.length;
+    }
+
+    // Finally, set the new game state
     setGameState((prevState) => ({
       ...prevState,
       trial: prevState.trial + 1,
@@ -82,16 +116,25 @@ const ProbabilisticReversalLearning = () => {
       consecutiveCorrect,
       lastFeedback,
       score,
-      history: [...prevState.history, newHistoryEntry],
+      history: updatedHistory,
       startTime: Date.now(),
+      lastReversalIndex, // Store the updated index
     }));
 
+    // Shuffle button colors for the next trial
     setColors(shuffleArray([...initialColors]));
   };
 
-  const startGame = (reversalThreshold: number, totalTrials: number) => {
-    setReversalThreshold(reversalThreshold);
+  const startGame = (
+    totalTrials: number,
+    performanceWindow: number,
+    criterion: number
+  ) => {
+    // Configure settings from user input or defaults
+    setPerformanceWindowSize(performanceWindow);
+    setPerformanceCriterion(criterion);
     setTotalTrials(totalTrials);
+
     setGameState({
       isStarted: true,
       trial: 0,
@@ -103,6 +146,7 @@ const ProbabilisticReversalLearning = () => {
       history: [],
       gameOver: false,
       startTime: Date.now(),
+      lastReversalIndex: 0, // reset
     });
     setColors(shuffleArray([...initialColors]));
   };
@@ -119,6 +163,7 @@ const ProbabilisticReversalLearning = () => {
       history: [],
       gameOver: false,
       startTime: Date.now(),
+      lastReversalIndex: 0,
     });
     setColors(shuffleArray([...initialColors]));
   };
@@ -126,15 +171,19 @@ const ProbabilisticReversalLearning = () => {
   return (
     <Card className="w-full max-w-5xl mx-auto border-0">
       <CardContent>
+        {/* Toggle Dark Mode */}
         <div className="flex justify-end mb-4 pt-4">
           <Button onClick={() => setIsDarkMode(!isDarkMode)}>
             {isDarkMode ? <Sun /> : <Moon />}
           </Button>
         </div>
+
+        {/* Start Screen vs. Game Screen */}
         {!gameState.isStarted ? (
           <StartGame onStart={startGame} />
         ) : (
           <>
+            {/* Game in progress */}
             {!gameState.gameOver && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
@@ -144,22 +193,24 @@ const ProbabilisticReversalLearning = () => {
                   <div className="dark:text-white">Score: {gameState.score}</div>
                 </div>
 
+                {/* Show feedback on last trial */}
                 {gameState.lastFeedback !== null && (
                   <Alert
                     className={
-                      gameState.lastFeedback 
-                        ? "bg-green-50 dark:bg-green-900" 
+                      gameState.lastFeedback
+                        ? "bg-green-50 dark:bg-green-900"
                         : "bg-red-50 dark:bg-red-900"
                     }
                   >
                     <AlertDescription className="dark:text-white">
                       {gameState.lastFeedback
                         ? "✓ Correct! You won 1 point!"
-                        : "✗ Incorrect! No points."}
+                        : "✗ Incorrect! You lost 1 point!"}
                     </AlertDescription>
                   </Alert>
                 )}
 
+                {/* Buttons to click */}
                 <div className="flex gap-4 justify-center flex-wrap">
                   {colors.map((color, index) => (
                     <Button
@@ -167,12 +218,13 @@ const ProbabilisticReversalLearning = () => {
                       onClick={() => handleChoice(color)}
                       className="w-20 h-20 text-2xl hover:opacity-80 transition-opacity"
                       style={{ backgroundColor: color }}
-                    ></Button>
+                    />
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Game over */}
             {gameState.gameOver && (
               <Results
                 gameState={gameState}

@@ -1,11 +1,30 @@
 import { Button } from "../ui/button";
-import { Slider } from "../ui/slider";
 import { useState } from "react";
 
 const StartGame = ({ onStart }) => {
-  const [totalTrials, setTotalTrials] = useState(20);
-  const [performanceWindowSize, setPerformanceWindowSize] = useState(10);
-  const [performanceCriterion, setPerformanceCriterion] = useState(7);
+  const [prolificID, setProlificID] = useState("");
+  const [error, setError] = useState("");
+
+  const validateProlificID = (id: string) => {
+    // Prolific IDs are 24 characters long and contain letters and numbers
+    const prolificIDRegex = /^[0-9a-zA-Z]{24}$/;
+    return prolificIDRegex.test(id);
+  };
+
+  const handleStart = () => {
+    if (!prolificID) {
+      setError("Please enter your Prolific ID");
+      return;
+    }
+    
+    if (!validateProlificID(prolificID)) {
+      setError("Invalid Prolific ID format. Please paste the correct 24-character ID from Prolific.");
+      return;
+    }
+    
+    setError("");
+    onStart(prolificID);
+  };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
@@ -23,52 +42,32 @@ const StartGame = ({ onStart }) => {
         </div>
 
         <div className="space-y-6">
-
           <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
             <label className="block mb-3 text-lg font-medium text-gray-900 dark:text-white">
-              Total Trials: <span className="text-blue-600">{totalTrials}</span>
+              Enter your Prolific ID:
             </label>
-            <Slider
-              value={[totalTrials]}
-              onValueChange={([value]) => setTotalTrials(value)}
-              max={200}
-              step={1}
-              min={5}
-              className="w-full"
+            <input
+              type="text"
+              value={prolificID}
+              onChange={(e) => {
+                setProlificID(e.target.value);
+                setError("");
+              }}
+              className={`w-full p-3 rounded-lg border ${
+                error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+              } text-black`}
+              placeholder="Paste your Prolific ID here"
             />
-          </div>
-
-          <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-            <label className="block mb-3 text-lg font-medium text-gray-900 dark:text-white">
-              Performance Window Size: <span className="text-blue-600">{performanceWindowSize}</span>
-            </label>
-            <Slider
-              value={[performanceWindowSize]}
-              onValueChange={([value]) => setPerformanceWindowSize(value)}
-              max={20}
-              step={1}
-              min={1}
-              className="w-full"
-            />
-          </div>
-
-          <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
-            <label className="block mb-3 text-lg font-medium text-gray-900 dark:text-white">
-              Performance Criterion: <span className="text-blue-600">{performanceCriterion}</span>
-            </label>
-            <Slider
-              value={[performanceCriterion]}
-              onValueChange={([value]) => setPerformanceCriterion(value)}
-              max={performanceWindowSize}
-              step={1}
-              min={1}
-              className="w-full"
-            />
+            {error && (
+              <p className="mt-2 text-sm text-red-500 dark:text-red-400">
+                {error}
+              </p>
+            )}
           </div>
         </div>
 
         <Button 
-          onClick={() => onStart(totalTrials, performanceWindowSize, performanceCriterion)}
+          onClick={handleStart}
           className="w-full py-6 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
         >
           Start Game

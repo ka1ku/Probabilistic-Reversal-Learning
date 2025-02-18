@@ -18,11 +18,12 @@ const ProbabilisticReversalLearning = () => {
   // Performance-based reversal constants
   const [performanceWindowSize, setPerformanceWindowSize] = useState(10);
   const [performanceCriterion, setPerformanceCriterion] = useState(7); 
+  const [totalTrials, setTotalTrials] = useState(20);
+  const [prolificID, setProlificID] = useState("");
 
   // Existing states
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [colors, setColors] = useState(shuffleArray([...initialColors]));
-  const [totalTrials, setTotalTrials] = useState(20);
 
   // We add lastReversalIndex to track where to start counting correct trials.
   const [gameState, setGameState] = useState({
@@ -37,6 +38,7 @@ const ProbabilisticReversalLearning = () => {
     gameOver: false,
     startTime: Date.now(),
     lastReversalIndex: 0, // ← NEW: we start counting from the beginning
+    prolificID: "", // Add Prolific ID to game state
   });
 
   useEffect(() => {
@@ -125,16 +127,8 @@ const ProbabilisticReversalLearning = () => {
     setColors(shuffleArray([...initialColors]));
   };
 
-  const startGame = (
-    totalTrials: number,
-    performanceWindow: number,
-    criterion: number
-  ) => {
+  const startGame = (prolificID: string) => {
     // Configure settings from user input or defaults
-    setPerformanceWindowSize(performanceWindow);
-    setPerformanceCriterion(criterion);
-    setTotalTrials(totalTrials);
-
     setGameState({
       isStarted: true,
       trial: 0,
@@ -147,6 +141,7 @@ const ProbabilisticReversalLearning = () => {
       gameOver: false,
       startTime: Date.now(),
       lastReversalIndex: 0, // reset
+      prolificID, // Set Prolific ID
     });
     setColors(shuffleArray([...initialColors]));
   };
@@ -164,6 +159,7 @@ const ProbabilisticReversalLearning = () => {
       gameOver: false,
       startTime: Date.now(),
       lastReversalIndex: 0,
+      prolificID: "", // Reset Prolific ID
     });
     setColors(shuffleArray([...initialColors]));
   };
@@ -193,7 +189,33 @@ const ProbabilisticReversalLearning = () => {
                   <div className="dark:text-white">Score: {gameState.score}</div>
                 </div>
 
-                {/* Show feedback on last trial */}
+                {/* {gameState.lastFeedback !== null && (
+                  <Alert
+                    className={
+                      gameState.lastFeedback
+                        ? "bg-green-50 dark:bg-green-900"
+                        : "bg-red-50 dark:bg-red-900"
+                    }
+                  >
+                    <AlertDescription className="dark:text-white">
+                      {gameState.lastFeedback
+                        ? "✓ Correct! You won 1 point!"
+                        : "✗ Incorrect! You lost 1 point!"}
+                    </AlertDescription>
+                  </Alert>
+                )} */}
+
+                {/* Buttons to click */}
+                <div className="flex gap-4 justify-center flex-wrap">
+                  {colors.map((color, index) => (
+                    <Button
+                      key={index}
+                      onClick={() => handleChoice(color)}
+                      className="w-20 h-20 text-2xl hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
                 {gameState.lastFeedback !== null && (
                   <Alert
                     className={
@@ -209,18 +231,6 @@ const ProbabilisticReversalLearning = () => {
                     </AlertDescription>
                   </Alert>
                 )}
-
-                {/* Buttons to click */}
-                <div className="flex gap-4 justify-center flex-wrap">
-                  {colors.map((color, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleChoice(color)}
-                      className="w-20 h-20 text-2xl hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
               </div>
             )}
 

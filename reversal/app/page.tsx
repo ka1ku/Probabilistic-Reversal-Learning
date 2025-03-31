@@ -19,11 +19,9 @@ const ProbabilisticReversalLearning = () => {
   const PERFORMANCE_CRITERION = 8;
   const TOTAL_TRIALS = 140;
 
-  // Existing states
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [colors, setColors] = useState(shuffleArray([...initialColors]));
 
-  // We add lastReversalIndex to track where to start counting correct trials.
   const [gameState, setGameState] = useState({
     isStarted: false,
     trial: 0,
@@ -75,25 +73,17 @@ const ProbabilisticReversalLearning = () => {
       duration: trialDuration,
     };
 
-    // Append to history
     let updatedHistory = [...gameState.history, newHistoryEntry];
 
-    // Copy over some values we might update
     let rewardingStimulus = gameState.rewardingStimulus;
     let numReversals = gameState.numReversals;
     let lastReversalIndex = gameState.lastReversalIndex;
 
-    // 1) Take the slice of trials *since the last reversal*.
-    //    Then optionally limit to 'performanceWindowSize' from that point.
     const historySinceLastReversal = updatedHistory.slice(lastReversalIndex);
     const recentSlice = historySinceLastReversal.slice(-PERFORMANCE_WINDOW_SIZE);
 
-    // 2) Count how many correct in that slice
     const correctCount = recentSlice.filter((t) => t.won).length;
-
-    // 3) If the criterion (e.g., 7 out of last 10) is met, do a reversal
     if (correctCount >= PERFORMANCE_CRITERION) {
-      // Trigger a reversal
       const newStimulus =
         initialColors[Math.floor(Math.random() * initialColors.length)];
 
@@ -101,11 +91,9 @@ const ProbabilisticReversalLearning = () => {
       numReversals += 1;
       newHistoryEntry.wasReversalTrial = true;
 
-      // 4) Update lastReversalIndex so future checks only look at new rule trials
       lastReversalIndex = updatedHistory.length;
     }
 
-    // Finally, set the new game state
     setGameState((prevState) => ({
       ...prevState,
       trial: prevState.trial + 1,
@@ -138,8 +126,8 @@ const ProbabilisticReversalLearning = () => {
       history: [],
       gameOver: false,
       startTime: Date.now(),
-      lastReversalIndex: 0, // reset
-      prolificID, // Set Prolific ID
+      lastReversalIndex: 0,
+      prolificID,
     });
     setColors(shuffleArray([...initialColors]));
   };
@@ -158,7 +146,7 @@ const ProbabilisticReversalLearning = () => {
       gameOver: false,
       startTime: Date.now(),
       lastReversalIndex: 0,
-      prolificID: "", // Reset Prolific ID
+      prolificID: "",
     });
     setColors(shuffleArray([...initialColors]));
   };
@@ -218,7 +206,6 @@ const ProbabilisticReversalLearning = () => {
               </div>
             )}
 
-            {/* Game over */}
             {gameState.gameOver && (
               <Results
                 gameState={gameState}

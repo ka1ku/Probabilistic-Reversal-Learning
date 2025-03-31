@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,7 +14,6 @@ const shuffleArray = (array: string[]) => {
 };
 
 const ProbabilisticReversalLearning = () => {
-
   const PERFORMANCE_WINDOW_SIZE = 10;
   const PERFORMANCE_CRITERION = 8;
   const TOTAL_TRIALS = 140;
@@ -79,7 +78,9 @@ const ProbabilisticReversalLearning = () => {
     let lastReversalIndex = gameState.lastReversalIndex;
 
     const historySinceLastReversal = updatedHistory.slice(lastReversalIndex);
-    const recentSlice = historySinceLastReversal.slice(-PERFORMANCE_WINDOW_SIZE);
+    const recentSlice = historySinceLastReversal.slice(
+      -PERFORMANCE_WINDOW_SIZE
+    );
 
     const correctCount = recentSlice.filter((t) => t.won).length;
     if (correctCount >= PERFORMANCE_CRITERION) {
@@ -156,7 +157,9 @@ const ProbabilisticReversalLearning = () => {
           </Button>
         </div>
         {!gameState.isStarted ? (
-          <StartGame onStart={startGame} />
+          <Suspense fallback={<div>Loading...</div>}>
+            <StartGame onStart={startGame} />
+          </Suspense>
         ) : (
           <>
             {!gameState.gameOver && (
@@ -199,10 +202,7 @@ const ProbabilisticReversalLearning = () => {
             )}
 
             {gameState.gameOver && (
-              <Results
-                gameState={gameState}
-                TOTAL_TRIALS={TOTAL_TRIALS}
-              />
+              <Results gameState={gameState} TOTAL_TRIALS={TOTAL_TRIALS} />
             )}
           </>
         )}

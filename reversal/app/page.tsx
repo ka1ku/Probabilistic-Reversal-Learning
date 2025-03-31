@@ -61,7 +61,6 @@ const ProbabilisticReversalLearning = () => {
       score -= 1;
     }
 
-    // Build a new history entry for this trial
     const trialDuration = Date.now() - gameState.startTime;
     const newHistoryEntry = {
       trial: gameState.trial + 1,
@@ -105,15 +104,12 @@ const ProbabilisticReversalLearning = () => {
       score,
       history: updatedHistory,
       startTime: Date.now(),
-      lastReversalIndex, // Store the updated index
+      lastReversalIndex,
     }));
-
-    // Shuffle button colors for the next trial
     setColors(shuffleArray([...initialColors]));
   };
 
   const startGame = (prolificID: string) => {
-    // Configure settings from user input or defaults
     setGameState({
       isStarted: true,
       trial: 0,
@@ -154,19 +150,15 @@ const ProbabilisticReversalLearning = () => {
   return (
     <Card className="w-full max-w-5xl mx-auto border-0">
       <CardContent>
-        {/* Toggle Dark Mode */}
         <div className="flex justify-end mb-4 pt-4">
           <Button onClick={() => setIsDarkMode(!isDarkMode)}>
             {isDarkMode ? <Sun /> : <Moon />}
           </Button>
         </div>
-
-        {/* Start Screen vs. Game Screen */}
         {!gameState.isStarted ? (
           <StartGame onStart={startGame} />
         ) : (
           <>
-            {/* Game in progress */}
             {!gameState.gameOver && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">

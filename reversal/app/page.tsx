@@ -12,7 +12,7 @@ const initialColors = ["red", "blue", "green", "yellow", "purple"];
 const shuffleArray = (array: string[]) => {
   return array.sort(() => Math.random() - 0.5);
 };
-
+//added
 const ProbabilisticReversalLearning = () => {
   const PERFORMANCE_WINDOW_SIZE = 10;
   const PERFORMANCE_CRITERION = 8;

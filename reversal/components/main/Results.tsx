@@ -7,7 +7,6 @@ interface TrialHistory {
   choice: string;
   rewardingStimulus: string;
   won: boolean;
-  wasReversalTrial: boolean;
   duration: number;
 }
 
@@ -45,7 +44,6 @@ const Results: FC<ResultsProps> = ({ gameState, TOTAL_TRIALS }) => {
               "Your Choice",
               "Correct Button",
               "Outcome",
-              "Was Reversal?",
               "Duration (ms)",
             ],
             ...gameState.history.map((trial) => [
@@ -54,7 +52,6 @@ const Results: FC<ResultsProps> = ({ gameState, TOTAL_TRIALS }) => {
               trial.choice,
               trial.rewardingStimulus,
               trial.won ? "Won" : "Lost",
-              trial.wasReversalTrial ? "Yes" : "No",
               trial.duration,
             ]),
           ]

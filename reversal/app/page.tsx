@@ -18,7 +18,7 @@ const ProbabilisticReversalLearning = () => {
   // Performance-based reversal constants
   const [performanceWindowSize, setPerformanceWindowSize] = useState(10);
   const [performanceCriterion, setPerformanceCriterion] = useState(7); 
-  const [totalTrials, setTotalTrials] = useState(20);
+  const [totalTrials, setTotalTrials] = useState(10);
   const [prolificID, setProlificID] = useState("");
 
   // Existing states

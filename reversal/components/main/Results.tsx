@@ -1,15 +1,5 @@
-// components/Results.tsx
-import React, { FC } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import React, { FC, useState, useEffect, useRef } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface TrialHistory {
   trial: number;
@@ -31,145 +21,103 @@ interface GameState {
 interface ResultsProps {
   gameState: GameState;
   TOTAL_TRIALS: number;
-  startGame: (prolificID: string) => void;
-  resetGame: () => void;
 }
 
-const Results: FC<ResultsProps> = ({
-  gameState,
-  TOTAL_TRIALS,
-  startGame,
-  resetGame,
-}) => {
+type SubmissionStatus = "idle" | "submitting" | "success" | "error";
+
+const Results: FC<ResultsProps> = ({ gameState, TOTAL_TRIALS }) => {
+  const [status, setStatus] = useState<SubmissionStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Use a ref as a flag so the submission is only triggered once.
+  const submittedRef = useRef(false);
+
+  useEffect(() => {
+    if (gameState.gameOver && !submittedRef.current) {
+      submittedRef.current = true;
+      setStatus("submitting");
+
+      const submitScores = async () => {
+        try {
+          const csvContent = [
+            [
+              "Trial",
+              "Score",
+              "Your Choice",
+              "Correct Button",
+              "Outcome",
+              "Was Reversal?",
+              "Duration (ms)",
+            ],
+            ...gameState.history.map((trial) => [
+              trial.trial,
+              trial.score,
+              trial.choice,
+              trial.rewardingStimulus,
+              trial.won ? "Won" : "Lost",
+              trial.wasReversalTrial ? "Yes" : "No",
+              trial.duration,
+            ]),
+          ]
+            .map((row) => row.join(","))
+            .join("\n");
+
+          if (!csvContent || csvContent.trim() === "") {
+            throw new Error("CSV content is empty or invalid.");
+          }
+
+          if (!gameState.prolificID || gameState.prolificID.trim() === "") {
+            throw new Error("Prolific ID is missing.");
+          }
+
+          console.log("Submitting scores for:", gameState.prolificID);
+          const response = await fetch(
+            "https://us-central1-reversal-b937e.cloudfunctions.net/search",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                csvContent,
+                prolificID: gameState.prolificID,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            let errorData;
+            try {
+              errorData = await response.json();
+            } catch (e) {
+              errorData = { error: response.statusText };
+            }
+            console.error("Server responded with error:", response.status, errorData);
+            throw new Error(
+              errorData?.error || `Failed to submit scores (HTTP ${response.status})`
+            );
+          }
+
+          const data = await response.json();
+          console.log("Scores submitted successfully:", data);
+          setStatus("success");
+  
+        } catch (error: any) {
+          console.error("Error during submission process:", error);
+          setErrorMessage(error.message || "An unknown error occurred.");
+          setStatus("error");
+        }
+      };
+
+      submitScores();
+    }
+  }, [gameState.gameOver, gameState.history, gameState.prolificID]);
+
   if (!gameState.gameOver) return null;
 
-  const reversalTrial = gameState.history.findIndex(
-    (trial) => trial.wasReversalTrial
-  );
-  const preReversalTrials =
-    reversalTrial !== -1 ? gameState.history.slice(0, reversalTrial) : [];
-  const postReversalTrials =
-    reversalTrial !== -1 ? gameState.history.slice(reversalTrial) : [];
-
-  const preReversalAccuracy =
-    preReversalTrials.length > 0
-      ? (
-          (preReversalTrials.filter((t) => t.won).length /
-            preReversalTrials.length) *
-          100
-        ).toFixed(1)
-      : "N/A";
-
-  const postReversalAccuracy =
-    postReversalTrials.length > 0
-      ? (
-          (postReversalTrials.filter((t) => t.won).length /
-            postReversalTrials.length) *
-          100
-        ).toFixed(1)
-      : "N/A";
-
-  const exportToCSV = async () => {
-    const csvContent = [
-      [
-        "Trial",
-        "Score",
-        "Your Choice",
-        "Correct Button",
-        "Outcome",
-        "Rule Change?",
-        "Duration (ms)",
-      ],
-      ...gameState.history.map((trial) => [
-        trial.trial,
-        trial.score,
-        trial.choice,
-        trial.rewardingStimulus,
-        trial.won ? "Won" : "Lost",
-        trial.wasReversalTrial ? "Yes" : "No",
-        trial.duration,
-      ]),
-    ]
-      .map((e) => e.join(","))
-      .join("\n");
-
-  
-  };
-
-  const submitScores = async () => {
-    try {
-      // Generate CSV content from the gameState.history
-      const csvContent = [
-        [
-          "Trial",
-          "Score",
-          "Your Choice",
-          "Correct Button",
-          "Outcome",
-          "Rule Change?",
-          "Duration (ms)",
-        ],
-        ...gameState.history.map((trial) => [
-          trial.trial,
-          trial.score,
-          trial.choice,
-          trial.rewardingStimulus,
-          trial.won ? "Won" : "Lost",
-          trial.wasReversalTrial ? "Yes" : "No",
-          trial.duration,
-        ]),
-      ]
-        .map((row) => row.join(",")) // Join each row with commas
-        .join("\n"); // Join rows with newlines
-  
-        if (!csvContent || csvContent.trim() === "") {
-          throw new Error("CSV content is empty or invalid.");
-        }
-  
-        // Send the POST request WITHOUT 'no-cors'
-        const response = await fetch(
-          "https://us-central1-reversal-b937e.cloudfunctions.net/search",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json", // Keep this!
-            },
-            // mode: 'no-cors', // REMOVE THIS LINE
-            body: JSON.stringify({
-              csvContent,
-              prolificID: gameState.prolificID,
-            }),
-          }
-        );
-  
-        // Now you can properly check the response status
-        if (!response.ok) {
-          // Try to get more error details from the backend response
-          let errorData;
-          try {
-            errorData = await response.json();
-          } catch (e) {
-            // Response wasn't valid JSON
-            errorData = { error: response.statusText };
-          }
-          console.error("Server responded with error:", response.status, errorData);
-          throw new Error(errorData?.error || `Failed to submit scores (HTTP ${response.status})`);
-        }
-  
-        const data = await response.json(); // This should work now
-        console.log("Scores submitted successfully:", data);
-        alert(`Scores submitted successfully! File ID: ${data.fileId}`); // Give user feedback
-  
-      } catch (error: any) { // Catch specific error types if needed
-        console.error("Error submitting scores:", error);
-        alert(`Failed to submit scores: ${error.message}. Please check the console.`);
-      }
-    };
-
   return (
-    <div className="space-y-4 mt-6">
-      <h3 className="text-lg font-semibold dark:text-white">Game Results</h3>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6 mt-6 text-center">
+      <h3 className="text-lg font-semibold dark:text-white">Game Complete</h3>
+      <div className="grid grid-cols-2 gap-4 text-left">
         <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded">
           <div className="font-medium dark:text-white">Total Score</div>
           <div className="text-2xl dark:text-white">{gameState.score}</div>
@@ -184,66 +132,39 @@ const Results: FC<ResultsProps> = ({
             %
           </div>
         </div>
-        <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded">
-          <div className="font-medium dark:text-white">
-            Pre-reversal Accuracy
-          </div>
-          <div className="text-2xl dark:text-white">{preReversalAccuracy}%</div>
-        </div>
-        <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded">
-          <div className="font-medium dark:text-white">
-            Post-reversal Accuracy
-          </div>
-          <div className="text-2xl dark:text-white">{postReversalAccuracy}%</div>
-        </div>
       </div>
+      <div className="mt-8">
+        {status === "submitting" && (
+          <div className="flex flex-col items-center space-y-2">
+            <p className="text-lg font-medium text-blue-600 dark:text-blue-400">
+              Submitting results... Please wait.
+            </p>
+            <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        )}
 
-      <div className="mt-6">
-        <h4 className="text-lg font-semibold mb-4 dark:text-white">
-          Trial History
-        </h4>
-        <div className="max-h-96 overflow-y-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-20">Trial</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Your Choice</TableHead>
-                <TableHead>Correct Button</TableHead>
-                <TableHead>Outcome</TableHead>
-                <TableHead>Rule Change?</TableHead>
-                <TableHead>Duration (ms)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {gameState.history.map((trial, index) => (
-                <TableRow key={index}>
-                  <TableCell>{trial.trial}</TableCell>
-                  <TableCell>{trial.score}</TableCell>
-                  <TableCell>{trial.choice}</TableCell>
-                  <TableCell>{trial.rewardingStimulus}</TableCell>
-                  <TableCell>
-                    {trial.won ? "✓ Won" : "✗ Lost"}
-                  </TableCell>
-                  <TableCell>
-                    {trial.wasReversalTrial ? "Yes" : "No"}
-                  </TableCell>
-                  <TableCell>{trial.duration}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+        {status === "success" && (
+          <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-400 dark:border-green-600">
+            <AlertTitle className="text-green-800 dark:text-green-200">Submission Successful!</AlertTitle>
+            <AlertDescription className="text-green-700 dark:text-green-300">
+              Your results have been recorded. You may now close this window.
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <div className="flex space-x-4 mt-4">
-        <Button onClick={resetGame}>Play Again</Button>
-        <Button onClick={exportToCSV} className="flex items-center">
-          <Download className="mr-2" /> Export to CSV
-        </Button>
-        <Button onClick={submitScores} className="flex items-center">
-    Submit Scores
-  </Button>
+        {status === "error" && (
+          <Alert variant="destructive">
+            <AlertTitle>Submission Failed</AlertTitle>
+            <AlertDescription>
+              There was an error submitting your results: {errorMessage}
+              <br />
+              Please contact the researcher or try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );

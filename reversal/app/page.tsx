@@ -257,9 +257,6 @@ const ProbabilisticReversalLearning = () => {
                   <div className="text-lg font-medium dark:text-white">
                     Trial: {gameState.trial + 1} / {TOTAL_TRIALS}
                   </div>
-                   <div className="text-lg font-medium dark:text-white">
-                      Reversals: {gameState.numReversals}
-                   </div>
                   <div className="text-lg font-medium dark:text-white">
                     Score: {gameState.score}
                   </div>

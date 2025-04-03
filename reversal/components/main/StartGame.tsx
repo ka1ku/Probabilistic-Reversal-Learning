@@ -56,11 +56,21 @@ const StartGame: React.FC<StartGameProps> = ({ onStart }) => {
             Probabilistic Learning Game
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-            The reward button may change during the game – try to find and stick
-            to the most rewarding option to maximize your score!
+            Select the Winning Button to Collect Points: In this game, you are
+            to choose which of the five colored buttons is rewarded, but you
+            won't know which of the colors wins until you make a guess. if your
+            score is in the top 25% of other players, you will receive a $10
+            bonus payment. In the following game, choose the colored button
+            most likely to win you points. The location of the buttons change
+            with each trial, but the winning button will remain the same color.
+            The winning button will occasionally change though, so please pay
+            attention to the game and your strategy. If you select which color
+            wins, you get 100 points. If you select the wrong button, you lose
+            50 points
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Note – this is a DEMO. Reach out to ka1@uchicago.edu with any concerns.
+            Note – this is a DEMO. Reach out to ka1@uchicago.edu with any
+            concerns.
           </p>
         </div>
 
